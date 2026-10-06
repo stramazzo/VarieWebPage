@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulatore fondo pensione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1F4; --panel:#FFFFFF; --ink:#18222E; --muted:#5B6877; --line:#D3DBE2;
+  --grow:#22735F; --grow-soft:#D6EBE4; --paid:#8592A0; --cost:#B7791F; --warn:#B23A3A;
+  --track:#DCE3E9; --tfr:#3E6FA8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121A22; --panel:#1A242F; --ink:#E6ECF1; --muted:#9AA7B4; --line:#2C3A47;
+    --grow:#4FB89A; --grow-soft:#1E3B34; --paid:#7D8A97; --cost:#E0A548; --warn:#E06B6B;
+    --track:#2A3743; --tfr:#7FA7D6;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121A22; --panel:#1A242F; --ink:#E6ECF1; --muted:#9AA7B4; --line:#2C3A47;
+  --grow:#4FB89A; --grow-soft:#1E3B34; --paid:#7D8A97; --cost:#E0A548; --warn:#E06B6B;
+  --track:#2A3743; --tfr:#7FA7D6;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums}
+main{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.05rem;font-weight:600;color:var(--muted);margin:0 0 4px}
+.hero{margin:0 0 18px}
+.big{font-size:clamp(2.4rem,9vw,3.6rem);font-weight:800;letter-spacing:-.02em;line-height:1.05;color:var(--grow)}
+.sub{color:var(--muted);margin:6px 0 0;max-width:60ch}
+.sub strong{color:var(--ink);font-weight:700}
+.grid{display:grid;gap:16px}
+@media(min-width:860px){.grid{grid-template-columns:1.35fr 1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.chartbox{position:relative;height:300px}
+@media(min-width:860px){.chartbox{height:360px}}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:.88rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle;background:var(--c)}
+h2{font-size:1.05rem;margin:0 0 12px;font-weight:700}
+.slider-block{margin-bottom:6px}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.slider-head label{font-weight:600}
+.pct{display:flex;align-items:baseline;gap:4px}
+.pct input{width:4.6em;text-align:right;font-size:1.5rem;font-weight:800;color:var(--ink);background:transparent;border:none;border-bottom:2px solid var(--line);padding:0 2px;font-family:inherit}
+.pct input:focus{outline:none;border-bottom-color:var(--grow)}
+.pct em{font-style:normal;font-weight:700;color:var(--muted)}
+input[type=range]{width:100%;margin:14px 0 4px;accent-color:var(--grow);height:28px}
+.ticks{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+@media(min-width:600px){.fields{grid-template-columns:repeat(3,1fr)}}
+.f label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.f input,.f select{width:100%;font:inherit;font-weight:600;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.f input:focus-visible,.f select:focus-visible,input[type=range]:focus-visible,.pct input:focus-visible{outline:2px solid var(--grow);outline-offset:2px}
+.f small{display:block;color:var(--muted);font-size:.76rem;margin-top:3px}
+.gauge{height:14px;background:var(--track);border-radius:7px;overflow:hidden;display:flex;margin:10px 0 6px}
+.gauge i{display:block;height:100%}
+.g-az{background:var(--paid)} .g-tu{background:var(--grow)} .g-over{background:var(--warn)}
+.gauge-cap{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+.rows{margin:14px 0 0;padding:0;list-style:none}
+.rows li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.rows li span:first-child{color:var(--muted)}
+.rows li b{font-weight:700;text-align:right}
+.note{font-size:.85rem;color:var(--muted);margin:10px 0 0}
+.warn{color:var(--warn);font-weight:600}
+.ok{color:var(--grow);font-weight:600}
+.check{display:flex;align-items:center;gap:8px;font-size:.9rem;margin-top:12px}
+.check input{width:18px;height:18px;accent-color:var(--grow)}
+.section{margin-top:16px}
+.foot{font-size:.8rem;color:var(--muted);margin-top:22px;max-width:70ch}
+
+.phase{padding:2px 0 14px}
+.phase + .phase{border-top:1px solid var(--line);padding-top:14px}
+.phase-sub{display:flex;align-items:center;gap:8px;margin-top:2px;color:var(--muted);font-size:.9rem}
+.phase-sub input{width:4.2em;font:inherit;font-weight:700;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.phase-sub input:focus-visible{outline:2px solid var(--grow);outline-offset:2px}
+.g-row{margin-top:12px}
+.g-row .g-t{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+.g-row .gauge{margin:6px 0 0}
+table.cmp{width:100%;border-collapse:collapse;margin-top:14px;font-size:.92rem}
+table.cmp th{font-weight:600;color:var(--muted);text-align:right;padding:6px 0 6px 8px}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left;padding-left:0;color:var(--muted)}
+table.cmp td{text-align:right;padding:7px 0 7px 8px;border-top:1px solid var(--line);font-weight:700}
+.hidden{display:none !important}
+.phases{display:grid;gap:0}
+@media(min-width:760px){.phases{grid-template-columns:1fr 1fr;column-gap:28px}
+  .phases .phase + .phase{border-top:none;padding-top:2px;border-left:1px solid var(--line);padding-left:28px}}
+
+
+.phases .phase.casa{grid-column:1/-1;border-top:1px solid var(--line);border-left:none;padding-left:0;padding-top:14px;margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+  <div class="panel" style="margin-bottom:20px">
+    <h2>I tuoi dati</h2>
+    <div class="fields">
+      <div class="f"><label for="base">Stipendio base mensile (€)</label><input id="base" type="text" min="0" step="1" inputmode="decimal"><small>Base del contributo azienda</small></div>
+      <div class="f"><label for="rut">Retribuzione utile TFR mensile (€)</label><input id="rut" type="text" min="0" step="1" inputmode="decimal"><small>Base del tuo contributo e del TFR</small></div>
+      <div class="f"><label for="mens">Mensilità</label><input id="mens" type="text" min="12" max="16" step="1" inputmode="numeric"></div>
+      <div class="f"><label for="pctAz">Contributo azienda (%)</label><input id="pctAz" type="text" min="0" max="15" step="0.1" inputmode="decimal"><small>Spetta solo se versi almeno l'1,2%</small></div>
+      <div class="f"><label for="anniFine">Anni di versamento totali</label><input id="anniFine" type="text" min="1" max="50" step="1" inputmode="numeric"><small>Fino alla fine del rapporto</small></div>
+      <div class="f"><label for="altri">Altri redditi annui (€)</label><input id="altri" type="text" min="0" step="100" inputmode="decimal"><small>Bonus tassati normalmente</small></div>
+      <div class="f"><label for="iscritto">Anni già iscritto al fondo</label><input id="iscritto" type="text" min="0" max="50" step="1" inputmode="numeric"><small>Per l'aliquota finale</small></div>
+    </div>
+    <label class="check"><input id="tfr" type="checkbox"> Includi il TFR versato nel fondo</label>
+  </div>
+
+  <div class="panel phases" style="margin-bottom:20px">
+      <div class="phase p1">
+        <div class="slider-head">
+          <label for="p1">Fase 1: il tuo contributo</label>
+          <div class="pct"><input id="p1Num" type="text" min="0" max="15" step="0.1" inputmode="decimal" aria-label="Contributo fase 1 in percentuale"><em>%</em></div>
+        </div>
+        <div class="phase-sub"><label for="anni1">per i primi</label><input id="anni1" type="text" min="0" max="50" step="1" inputmode="numeric"><span>anni</span></div>
+        <div class="phase-sub"><label for="rend1">rendimento netto</label><input id="rend1" type="text" min="0" max="10" step="0.1" inputmode="decimal"><span>% annuo</span></div>
+        <input id="p1" type="range" min="0" max="15" step="0.1">
+        <div class="ticks"><span>0%</span><span>5%</span><span>10%</span><span>15%</span></div>
+      </div>
+      <div class="phase" id="phase2">
+        <div class="slider-head">
+          <label for="p2">Fase 2: il tuo contributo</label>
+          <div class="pct"><input id="p2Num" type="text" min="0" max="15" step="0.1" inputmode="decimal" aria-label="Contributo fase 2 in percentuale"><em>%</em></div>
+        </div>
+        <div class="phase-sub"><span id="p2Range"></span></div>
+        <div class="phase-sub"><label for="rend2">rendimento netto</label><input id="rend2" type="text" min="0" max="10" step="0.1" inputmode="decimal"><span>% annuo</span></div>
+        <input id="p2" type="range" min="0" max="15" step="0.1">
+        <div class="ticks"><span>0%</span><span>5%</span><span>10%</span><span>15%</span></div>
+      </div>
+      <div class="phase casa">
+        <div class="slider-head">
+          <label for="pc">Prelievo per la prima casa</label>
+          <div class="pct"><input id="pcNum" type="text" inputmode="decimal" aria-label="Percentuale da prelevare"><em>%</em></div>
+        </div>
+        <div class="phase-sub"><label for="annoCasa">all'anno</label><input id="annoCasa" type="text" inputmode="numeric"><span id="casaInfo"></span></div>
+        <input id="pc" type="range" min="0" max="75" step="1">
+        <div class="ticks"><span>0%</span><span>25%</span><span>50%</span><span>75%</span></div>
+        <p class="note" id="casaNote"></p>
+      </div>
+
+  </div>
+
+  <section class="hero">
+    <h1>Netto stimato a fine rapporto</h1>
+    <div class="big" id="outNetto">—</div>
+    <p class="sub" id="outSub"></p>
+  </section>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="chartbox"><canvas id="chart" aria-label="Andamento del fondo negli anni" role="img"></canvas></div>
+      <div class="legend">
+        <span style="--c:var(--grow)">Valore del fondo</span>
+        <span style="--c:var(--paid)">Totale versato</span>
+        <span style="--c:var(--tfr)" id="legTfr">TFR versato</span>
+        <span style="--c:var(--cost)">Quanto ti costa davvero</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Deduzione IRPEF</h2>
+      <div class="g-row"><div class="g-t"><span>Fase 1</span><span id="g1Label"></span></div>
+        <div class="gauge" aria-hidden="true"><i class="g-az" id="g1Az"></i><i class="g-tu" id="g1Tu"></i><i class="g-over" id="g1Over"></i></div></div>
+      <div class="g-row" id="g2Row"><div class="g-t"><span>Fase 2</span><span id="g2Label"></span></div>
+        <div class="gauge" aria-hidden="true"><i class="g-az" id="g2Az"></i><i class="g-tu" id="g2Tu"></i><i class="g-over" id="g2Over"></i></div></div>
+      <div class="gauge-cap" style="margin-top:6px"><span>grigio azienda, verde tuo</span><span>tetto 5.300 €</span></div>
+      <table class="cmp">
+        <thead><tr><th scope="col">All'anno</th><th scope="col">Fase 1</th><th scope="col" class="c2">Fase 2</th></tr></thead>
+        <tbody>
+          <tr><td>Contributo azienda</td><td id="t1Az"></td><td id="t2Az" class="c2"></td></tr>
+          <tr><td>Tuo contributo</td><td id="t1Tu"></td><td id="t2Tu" class="c2"></td></tr>
+          <tr><td>Deducibile usato</td><td id="t1Ded"></td><td id="t2Ded" class="c2"></td></tr>
+          <tr><td>Risparmio IRPEF</td><td id="t1Save"></td><td id="t2Save" class="c2"></td></tr>
+          <tr><td>Costo netto per mensilità</td><td id="t1Cost"></td><td id="t2Cost" class="c2"></td></tr>
+        </tbody>
+      </table>
+      <p class="note">Percentuale massima per restare nel tetto: <b id="rMax"></b></p>
+      <p class="note" id="rNote"></p>
+    </div>
+  </div>
+
+  <div class="panel section">
+    <h2>Riepilogo a fine rapporto</h2>
+    <ul class="rows" style="margin-top:0">
+      <li><span>Totale versato</span><b id="sVers"></b></li>
+      <li><span>di cui tuo / azienda / TFR</span><b id="sSplit"></b></li>
+      <li><span>Risparmio IRPEF cumulato</span><b id="sSave"></b></li>
+      <li><span>Costo netto per te</span><b id="sCost"></b></li>
+      <li id="rowCasa"><span id="sCasaL">Prelievo casa (netto)</span><b id="sCasa"></b></li>
+      <li><span>Valore lordo del fondo a fine rapporto</span><b id="sLordo"></b></li>
+      <li><span>Tassa finale</span><b id="sTax"></b></li>
+      <li><span>Netto</span><b id="sNetto"></b></li>
+      <li><span>Ritirabile in capitale (60%)</span><b id="sCap"></b></li>
+    </ul>
+  </div>
+
+  <p class="foot">Stima indicativa: stipendio costante, rendimento netto costante in ciascuna fase (già al netto della tassa del 20% sui rendimenti), versamenti a fine anno. Il contributo dell'azienda spetta solo negli anni in cui versi almeno l'1,2%. IRPEF 2026 con scaglioni 23% / 33% / 43% e contributi INPS stimati al 9,19%. TFR pari alla retribuzione annua divisa per 13,5, meno lo 0,5% INPS. Tassa finale 15%, ridotta dello 0,3% per ogni anno oltre il quindicesimo, minimo 9%, applicata su contributi dedotti e TFR. Non è una consulenza finanziaria.</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function(){
+  var CAP = 5300, INPS = 0.0919, TFR_RATE = 1/13.5 - 0.005, SOGLIA = 1.2;
+  var defaults = {base:2000,rut:3000,mens:13,pctAz:2.5,p1:1.2,anni1:10,p2:1.2,anniFine:40,pc:0,annoCasa:10,rend1:4,rend2:2,altri:0,iscritto:0,tfr:false};
+  var ids = ["base","rut","mens","pctAz","anniFine","rend1","rend2","altri","iscritto","anni1","annoCasa"];
+  var $ = function(id){return document.getElementById(id)};
+  var eur = new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+  var num1 = new Intl.NumberFormat("it-IT",{maximumFractionDigits:1});
+  var KEY = "fp-sim-v7";
+
+  var state = Object.assign({}, defaults);
+  try { var saved = JSON.parse(localStorage.getItem(KEY) || "null"); if (saved) Object.assign(state, saved); } catch(e) {}
+  function fmtIn(x){ return String(x).replace(".", ","); }
+  ids.forEach(function(k){ $(k).value = fmtIn(state[k]); });
+  ["p1","p2","pc"].forEach(function(k){ $(k).value = state[k]; $(k + "Num").value = fmtIn(state[k]); });
+  $("tfr").checked = !!state.tfr;
+
+  function irpef(x){
+    x = Math.max(0, x);
+    var t = Math.min(x, 28000) * 0.23;
+    if (x > 28000) t += (Math.min(x, 50000) - 28000) * 0.33;
+    if (x > 50000) t += (x - 50000) * 0.43;
+    return t;
+  }
+  function v(id){ var n = parseFloat(String($(id).value).replace(",", ".")); return isFinite(n) ? n : 0; }
+  function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  var chart = null;
+  function buildChart(){
+    if (!window.Chart) return;
+    chart = new Chart($("chart").getContext("2d"), {
+      type: "line",
+      data: { labels: [], datasets: [
+        { label: "Valore del fondo", data: [], borderColor: css("--grow"), backgroundColor: css("--grow-soft"), fill: true, borderWidth: 3, pointRadius: 0, tension: .25 },
+        { label: "Totale versato", data: [], borderColor: css("--paid"), borderWidth: 2, pointRadius: 0, borderDash: [6,4], fill: false },
+        { label: "TFR versato", data: [], borderColor: css("--tfr"), borderWidth: 2, pointRadius: 0, fill: false },
+        { label: "Quanto ti costa davvero", data: [], borderColor: css("--cost"), borderWidth: 2, pointRadius: 0, fill: false }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+        interaction: { mode: "index", intersect: false },
+        plugins: { filler: { drawTime: "beforeDatasetsDraw" }, legend: { display: false }, tooltip: { filter: function(i){ return !i.dataset.hidden; }, callbacks: {
+          title: function(it){ return "Anno " + it[0].label; },
+          label: function(c){ return c.dataset.label + ": " + eur.format(c.parsed.y); } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: css("--muted"), maxTicksLimit: 9 } },
+          y: { grid: { color: css("--line") }, ticks: { color: css("--muted"), callback: function(val){ return val >= 1000 ? Math.round(val/1000) + "k" : val; } } }
+        }
+      }
+    });
+  }
+  function recolor(){
+    if (!chart) return;
+    var ds = chart.data.datasets;
+    ds[0].borderColor = css("--grow"); ds[0].backgroundColor = css("--grow-soft");
+    ds[1].borderColor = css("--paid"); ds[2].borderColor = css("--tfr"); ds[3].borderColor = css("--cost");
+    chart.options.scales.x.ticks.color = css("--muted");
+    chart.options.scales.y.ticks.color = css("--muted");
+    chart.options.scales.y.grid.color = css("--line");
+    chart.update("none");
+  }
+
+  function yearFigures(pct, annBase, annRut, pctAz, imp){
+    var az = pct >= SOGLIA ? annBase * pctAz / 100 : 0;
+    var tu = annRut * pct / 100;
+    var dedTu = Math.min(tu, Math.max(0, CAP - az));
+    var save = irpef(imp) - irpef(imp - dedTu);
+    return { az: az, tu: tu, dedTu: dedTu, save: save, over: Math.max(0, az + tu - CAP) };
+  }
+  function gauge(prefix, f){
+    var scale = Math.max(CAP, f.az + f.tu);
+    $(prefix + "Az").style.width = (Math.min(f.az, CAP) / scale * 100) + "%";
+    $(prefix + "Tu").style.width = (Math.max(0, Math.min(f.tu, CAP - f.az)) / scale * 100) + "%";
+    $(prefix + "Over").style.width = (f.over / scale * 100) + "%";
+    $(prefix + "Label").textContent = eur.format(f.az + f.tu);
+  }
+  function fillCol(n, f, mens){
+    $("t" + n + "Az").textContent = eur.format(f.az);
+    $("t" + n + "Tu").textContent = eur.format(f.tu);
+    $("t" + n + "Ded").textContent = eur.format(Math.min(CAP, f.az + f.dedTu));
+    $("t" + n + "Save").textContent = eur.format(f.save);
+    $("t" + n + "Cost").textContent = eur.format((f.tu - f.save) / mens);
+  }
+
+  function calc(){
+    var s = {};
+    ids.forEach(function(k){ s[k] = v(k); });
+    s.p1 = Math.max(0, Math.min(15, v("p1Num"))); s.p2 = Math.max(0, Math.min(15, v("p2Num")));
+    s.pc = Math.max(0, Math.min(75, v("pcNum")));
+    s.annoCasa = Math.max(1, Math.round(s.annoCasa));
+    s.tfr = $("tfr").checked;
+    s.mens = Math.max(1, Math.round(s.mens));
+    s.anniFine = Math.max(1, Math.min(50, Math.round(s.anniFine)));
+    s.anni1 = Math.max(0, Math.min(s.anniFine, Math.round(s.anni1)));
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch(e) {}
+
+    var annRut = s.rut * s.mens, annBase = s.base * s.mens;
+    var imp = annRut * (1 - INPS) + s.altri;
+    var f1 = yearFigures(s.p1, annBase, annRut, s.pctAz, imp);
+    var f2 = yearFigures(s.p2, annBase, annRut, s.pctAz, imp);
+    var hasP2 = s.anni1 < s.anniFine;
+    var hasP1 = s.anni1 > 0;
+
+    var minAnno = Math.max(1, 8 - Math.max(0, Math.round(s.iscritto)));
+    var casa = { ok: s.annoCasa >= minAnno && s.annoCasa <= s.anniFine, lordo: 0, tax: 0, netto: 0, max: 0 };
+    var M = 0, vers = 0, cost = 0, taxBase = 0, sumTu = 0, sumAz = 0, sumTfr = 0, sumSave = 0;
+    var labels = [0], dM = [0], dV = [0], dT = [0], dC = [0];
+    for (var y = 1; y <= s.anniFine; y++){
+      var f = y <= s.anni1 ? f1 : f2;
+      var r = (y <= s.anni1 ? s.rend1 : s.rend2) / 100;
+      var tf = s.tfr ? annRut * TFR_RATE : 0;
+      M = M * (1 + r) + f.az + f.tu + tf;
+      vers += f.az + f.tu + tf; sumTu += f.tu; sumAz += f.az; sumTfr += tf; sumSave += f.save;
+      cost += f.tu - f.save;
+      taxBase += f.az + f.dedTu + tf;
+      if (y === s.annoCasa) {
+        casa.max = M * 0.75;
+        if (casa.ok && s.pc > 0 && M > 0) {
+          var w = M * s.pc / 100;
+          var share = taxBase / M;
+          casa.lordo = w; casa.tax = w * share * 0.23; casa.netto = w - casa.tax;
+          M -= w; taxBase *= (1 - s.pc / 100);
+        }
+      }
+      labels.push(y); dM.push(Math.round(M)); dV.push(Math.round(vers)); dT.push(Math.round(sumTfr)); dC.push(Math.round(cost));
+    }
+    var yearsIn = s.anniFine + Math.max(0, s.iscritto);
+    var rate = Math.max(9, 15 - 0.3 * Math.max(0, yearsIn - 15)) / 100;
+    var tax = taxBase * rate, netto = M - tax;
+
+    $("outNetto").textContent = eur.format(netto);
+    var plan = hasP1 && hasP2
+      ? num1.format(s.p1) + "% per " + s.anni1 + " anni, poi " + num1.format(s.p2) + "% per " + (s.anniFine - s.anni1)
+      : (hasP1 ? num1.format(s.p1) + "% per " + s.anniFine : num1.format(s.p2) + "% per " + s.anniFine);
+    var casaTxt = casa.lordo > 0 ? " All'anno " + s.annoCasa + " prelevi <strong>" + eur.format(casa.netto) + "</strong> netti per la casa." : "";
+    $("outSub").innerHTML = "Versando " + plan + " anni." + casaTxt + " Ti costa davvero <strong>" + eur.format(cost) + "</strong>, al netto del risparmio IRPEF.";
+
+    $("p2Range").textContent = hasP2 ? "dall'anno " + (s.anni1 + 1) + " all'anno " + s.anniFine : "nessun anno: la fase 1 copre tutto il periodo";
+    $("phase2").style.opacity = hasP2 ? "1" : ".5";
+
+    gauge("g1", f1); gauge("g2", f2);
+    $("g2Row").classList.toggle("hidden", !hasP2);
+    document.querySelectorAll(".c2").forEach(function(el){ el.classList.toggle("hidden", !hasP2); });
+    fillCol(1, f1, s.mens); fillCol(2, f2, s.mens);
+
+    var azFull = annBase * s.pctAz / 100;
+    var maxPct = annRut > 0 ? Math.max(0, (CAP - azFull) / annRut * 100) : 0;
+    $("rMax").textContent = num1.format(Math.floor(maxPct * 10) / 10) + "%";
+
+    var msgs = [];
+    [[f1, s.p1, "fase 1", hasP1], [f2, s.p2, "fase 2", hasP2]].forEach(function(x){
+      if (!x[3]) return;
+      if (x[1] < SOGLIA && s.pctAz > 0) msgs.push('<span class="warn">In ' + x[2] + ' sei sotto l\'1,2%: perdi il contributo dell\'azienda.</span>');
+      else if (x[0].over > 0) msgs.push('<span class="warn">In ' + x[2] + ' superi il tetto di ' + eur.format(x[0].over) + '.</span> Quella parte non è deducibile, ma non viene tassata all\'uscita se lo comunichi al fondo.');
+    });
+    $("rNote").innerHTML = msgs.length ? msgs.join("<br>") : '<span class="ok">Sei nel tetto in entrambe le fasi.</span>';
+
+    $("sVers").textContent = eur.format(vers);
+    $("rowCasa").classList.toggle("hidden", !(casa.lordo > 0));
+    $("sCasaL").textContent = "Prelievo casa, anno " + s.annoCasa + " (netto)";
+    $("sCasa").textContent = eur.format(casa.netto) + " (tasse " + eur.format(casa.tax) + ")";
+    $("casaInfo").textContent = casa.ok ? "· massimo " + eur.format(casa.max) : "";
+    var cn = $("casaNote");
+    if (s.annoCasa > s.anniFine) cn.innerHTML = '<span class="warn">L\'anno è oltre la fine dei versamenti.</span>';
+    else if (!casa.ok) cn.innerHTML = '<span class="warn">Servono almeno 8 anni di iscrizione: puoi prelevare dall\'anno ' + minAnno + ' in poi.</span>';
+    else if (casa.lordo > 0) cn.innerHTML = 'Prelevi ' + eur.format(casa.lordo) + ' lordi, tassati al 23% sulla parte di contributi e TFR. Il resto del fondo continua a crescere.';
+    else cn.textContent = "Fino al 75% del fondo, dopo 8 anni di iscrizione. Lascia 0% se non ti serve.";
+    $("sSplit").textContent = eur.format(sumTu) + " / " + eur.format(sumAz) + " / " + eur.format(sumTfr);
+    $("sSave").textContent = eur.format(sumSave);
+    $("sCost").textContent = eur.format(cost);
+    $("sLordo").textContent = eur.format(M);
+    $("sTax").textContent = eur.format(tax) + " (" + num1.format(rate * 100) + "%)";
+    $("sNetto").textContent = eur.format(netto);
+    $("sCap").textContent = eur.format(netto * 0.6);
+
+    $("legTfr").classList.toggle("hidden", !s.tfr);
+    if (chart) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = dM;
+      chart.data.datasets[1].data = dV;
+      chart.data.datasets[2].data = dT;
+      chart.data.datasets[2].hidden = !s.tfr;
+      chart.data.datasets[3].data = dC;
+      chart.update();
+    }
+  }
+
+  ["p1","p2","pc"].forEach(function(k){
+    var mx = k === "pc" ? 75 : 15;
+    $(k).addEventListener("input", function(){ $(k + "Num").value = fmtIn(this.value); calc(); });
+    $(k + "Num").addEventListener("input", function(){ $(k).value = Math.max(0, Math.min(mx, v(k + "Num"))); calc(); });
+  });
+  ids.forEach(function(k){ $(k).addEventListener("input", calc); });
+  $("tfr").addEventListener("change", calc);
+
+  buildChart();
+  calc();
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", recolor); } catch(e) {}
+  new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
+</body>
+</html>
